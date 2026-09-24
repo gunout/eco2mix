@@ -1,0 +1,1281 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>⚡ Dashboard Expert ÉCO2mix — Analyse interactive</title>
+<script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+<style>
+  :root {
+    --bleu-france: #000091;
+    --blanc: #ffffff;
+    --rouge-marianne: #E1000F;
+    --gris-900: #1e1e1e;
+    --gris-700: #3a3a3a;
+    --gris-500: #666666;
+    --gris-300: #e5e5e5;
+    --gris-100: #f6f6f6;
+    --vert-valid: #18753c;
+    --jaune-warning: #b34000;
+    --ombre-douce: 0 1px 3px rgba(0,0,0,0.08);
+    --bg-body: #f6f6f6;
+    --bg-card: #ffffff;
+    --text-main: #1e1e1e;
+    --text-sub: #666666;
+    --border: #e5e5e5;
+  }
+  [data-theme="dark"] {
+    --bleu-france: #6b6bff;
+    --gris-900: #f0f0f0;
+    --gris-700: #d0d0d0;
+    --gris-500: #a0a0a0;
+    --gris-300: #333333;
+    --gris-100: #1a1a1a;
+    --bg-body: #0f0f0f;
+    --bg-card: #1a1a1a;
+    --text-main: #f0f0f0;
+    --text-sub: #a0a0a0;
+    --border: #333333;
+    --rouge-marianne: #ff4455;
+    --vert-valid: #4ade80;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Marianne', 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    background: var(--bg-body);
+    color: var(--text-main);
+    font-size: 16px;
+    line-height: 1.5;
+    transition: background 0.3s, color 0.3s;
+  }
+
+  /* Bandeau État */
+  .bandeau-etat {
+    background: var(--bg-card);
+    border-bottom: 1px solid var(--border);
+    padding: 12px 24px;
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 16px; flex-wrap: wrap;
+  }
+  .bandeau-etat .marianne { display: flex; align-items: center; gap: 12px; text-decoration: none; color: var(--text-main); }
+  .bandeau-etat .marianne-texte { font-size: 0.85rem; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; }
+  .bandeau-etat .marianne-devise { font-size: 0.7rem; color: var(--text-sub); }
+  .bandeau-etat .marianne-drapeau { display: inline-flex; width: 42px; height: 28px; border-radius: 2px; overflow: hidden; box-shadow: 0 0 0 1px var(--border); }
+  .marianne-drapeau span { flex: 1; }
+  .marianne-drapeau .bleu { background: #000091; }
+  .marianne-drapeau .blanc { background: #ffffff; }
+  .marianne-drapeau .rouge { background: #E1000F; }
+  .bandeau-etat .actions-etat { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  .btn-theme {
+    background: var(--gris-100); border: 1px solid var(--border); color: var(--text-main);
+    padding: 6px 14px; border-radius: 4px; cursor: pointer; font-size: 0.8rem; font-weight: 600;
+    transition: all 0.15s;
+  }
+  .btn-theme:hover { border-color: var(--bleu-france); color: var(--bleu-france); }
+
+  .tricolore {
+    height: 4px;
+    background: linear-gradient(90deg, #000091 0%, #000091 33.33%, #ffffff 33.33%, #ffffff 66.66%, #E1000F 66.66%, #E1000F 100%);
+  }
+
+  /* En-tête */
+  .header-officiel {
+    background: var(--bg-card); padding: 28px 24px; text-align: center;
+    border-bottom: 1px solid var(--border);
+  }
+  .header-officiel h1 {
+    font-size: 2rem; font-weight: 700; color: var(--bleu-france);
+    margin-bottom: 6px; letter-spacing: -0.5px;
+  }
+  .header-officiel .sous-titre { font-size: 0.98rem; color: var(--text-sub); margin-bottom: 16px; }
+  .badges-officiels { display: flex; justify-content: center; gap: 8px; flex-wrap: wrap; }
+  .badge-officiel {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 5px 12px; font-size: 0.76rem; font-weight: 600;
+    border-radius: 4px; background: var(--gris-100); color: var(--text-sub);
+    border: 1px solid var(--border);
+  }
+  .badge-officiel.bleu { background: #e3e3fd; color: #000091; border-color: #c6c6fb; }
+  .badge-officiel.rouge { background: #ffe9e9; color: #E1000F; border-color: #ffc5c5; }
+  .badge-officiel.vert { background: #dffee6; color: #18753c; border-color: #b8ecc7; }
+  .badge-officiel.live::before {
+    content: ''; display: inline-block; width: 8px; height: 8px; border-radius: 50%;
+    background: #18753c; animation: pulse 2s infinite;
+  }
+  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
+
+  .conteneur { max-width: 1440px; margin: 0 auto; padding: 24px; }
+
+  /* Panneau de contrôle */
+  .panneau-controle {
+    background: var(--bg-card); border: 1px solid var(--border); border-radius: 4px;
+    padding: 16px 20px; margin-bottom: 20px; box-shadow: var(--ombre-douce);
+    display: flex; flex-wrap: wrap; gap: 16px; align-items: center;
+  }
+  .panneau-controle .controle-groupe {
+    display: flex; align-items: center; gap: 8px;
+  }
+  .panneau-controle label {
+    font-size: 0.78rem; font-weight: 700; color: var(--text-sub);
+    text-transform: uppercase; letter-spacing: 0.4px;
+  }
+  .panneau-controle select, .panneau-controle input[type="number"] {
+    background: var(--bg-card); color: var(--text-main);
+    border: 1px solid var(--border); border-radius: 4px;
+    padding: 6px 10px; font-size: 0.85rem; font-family: inherit;
+  }
+  .panneau-controle select:focus, .panneau-controle input:focus {
+    outline: 2px solid var(--bleu-france); outline-offset: 1px;
+  }
+  .btn-action {
+    background: var(--bleu-france); color: white; border: none;
+    padding: 8px 16px; border-radius: 4px; cursor: pointer;
+    font-size: 0.85rem; font-weight: 600; font-family: inherit;
+    transition: background 0.15s;
+  }
+  .btn-action:hover { background: #1212ff; }
+  .btn-action:disabled { background: var(--gris-500); cursor: not-allowed; }
+  .btn-secondaire {
+    background: var(--gris-100); color: var(--text-main); border: 1px solid var(--border);
+    padding: 8px 16px; border-radius: 4px; cursor: pointer;
+    font-size: 0.85rem; font-weight: 600; font-family: inherit;
+    transition: all 0.15s;
+  }
+  .btn-secondaire:hover { border-color: var(--bleu-france); color: var(--bleu-france); }
+
+  /* Barre d'info */
+  .barre-info {
+    background: var(--bg-card); border-left: 4px solid var(--bleu-france);
+    padding: 14px 18px; margin-bottom: 20px; border-radius: 4px;
+    box-shadow: var(--ombre-douce);
+    display: flex; justify-content: space-between; flex-wrap: wrap; gap: 14px;
+    font-size: 0.86rem;
+  }
+  .barre-info .info-item { display: flex; align-items: center; gap: 8px; color: var(--text-sub); }
+  .barre-info .info-item strong { color: var(--text-main); }
+
+  /* Section */
+  .section-titre {
+    font-size: 1.1rem; font-weight: 700; color: var(--text-main);
+    margin: 32px 0 14px; padding-bottom: 8px;
+    border-bottom: 2px solid var(--bleu-france);
+    display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  }
+  .section-titre .titre-gauche { display: flex; align-items: center; gap: 10px; }
+  .section-titre .titre-gauche::before {
+    content: ''; display: inline-block; width: 4px; height: 18px;
+    background: var(--bleu-france); border-radius: 2px;
+  }
+  .section-titre .actions-section { display: flex; gap: 6px; }
+  .section-titre .btn-mini {
+    background: transparent; border: 1px solid var(--border); color: var(--text-sub);
+    padding: 3px 10px; border-radius: 3px; cursor: pointer;
+    font-size: 0.72rem; font-weight: 600; font-family: inherit;
+  }
+  .section-titre .btn-mini:hover { border-color: var(--bleu-france); color: var(--bleu-france); }
+
+  .section-desc {
+    font-size: 0.85rem; color: var(--text-sub); margin-bottom: 14px; font-style: italic;
+  }
+
+  /* Métriques */
+  .grille-metriques {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(175px, 1fr));
+    gap: 12px; margin-bottom: 20px;
+  }
+  .carte-metrique {
+    background: var(--bg-card); border: 1px solid var(--border);
+    border-radius: 4px; padding: 14px;
+    transition: border-color 0.15s, box-shadow 0.15s, transform 0.15s;
+    cursor: pointer; position: relative;
+  }
+  .carte-metrique:hover {
+    border-color: var(--bleu-france); box-shadow: var(--ombre-douce);
+    transform: translateY(-2px);
+  }
+  .carte-metrique .label {
+    font-size: 0.7rem; color: var(--text-sub); text-transform: uppercase;
+    letter-spacing: 0.5px; margin-bottom: 6px; font-weight: 600;
+  }
+  .carte-metrique .valeur { font-size: 1.5rem; font-weight: 700; color: var(--text-main); line-height: 1.15; }
+  .carte-metrique .unite { font-size: 0.75rem; color: var(--text-sub); margin-top: 3px; }
+  .carte-metrique.bleu { border-left: 4px solid var(--bleu-france); }
+  .carte-metrique.rouge { border-left: 4px solid var(--rouge-marianne); }
+  .carte-metrique.vert { border-left: 4px solid var(--vert-valid); }
+  .carte-metrique.neutre { border-left: 4px solid var(--gris-500); }
+  .carte-metrique.jaune { border-left: 4px solid var(--jaune-warning); }
+  .carte-metrique .tooltip {
+    position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%);
+    background: var(--gris-900); color: var(--gris-100);
+    padding: 6px 10px; border-radius: 4px; font-size: 0.72rem;
+    white-space: nowrap; opacity: 0; pointer-events: none;
+    transition: opacity 0.15s; margin-bottom: 4px; z-index: 10;
+  }
+  .carte-metrique:hover .tooltip { opacity: 1; }
+
+  /* Graphiques */
+  .grille-graphiques {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(460px, 1fr));
+    gap: 16px; margin-bottom: 20px;
+  }
+  .carte-graphique {
+    background: var(--bg-card); border: 1px solid var(--border);
+    border-radius: 4px; padding: 16px;
+    transition: box-shadow 0.15s;
+  }
+  .carte-graphique:hover { box-shadow: var(--ombre-douce); }
+  .carte-graphique h3 {
+    font-size: 0.92rem; font-weight: 700; color: var(--text-main);
+    margin-bottom: 10px; display: flex; align-items: center; justify-content: space-between;
+  }
+  .carte-graphique h3 .btn-mini {
+    background: transparent; border: 1px solid var(--border); color: var(--text-sub);
+    padding: 2px 8px; border-radius: 3px; cursor: pointer;
+    font-size: 0.68rem; font-weight: 600; font-family: inherit;
+  }
+  .carte-graphique h3 .btn-mini:hover { border-color: var(--bleu-france); color: var(--bleu-france); }
+  .carte-graphique .graph-desc {
+    font-size: 0.78rem; color: var(--text-sub); margin-bottom: 10px;
+    line-height: 1.4; font-style: italic;
+  }
+  .graphique { width: 100%; height: 300px; }
+  .graphique-grand { width: 100%; height: 400px; }
+
+  /* Messages */
+  .message-chargement { text-align: center; padding: 48px; color: var(--text-sub); font-size: 0.95rem; }
+  .message-erreur {
+    background: #fff4f4; border: 1px solid #ffc5c5; border-left: 4px solid var(--rouge-marianne);
+    color: var(--text-main); padding: 16px; border-radius: 4px; margin: 16px 0; font-size: 0.88rem;
+  }
+  .message-erreur strong { color: var(--rouge-marianne); }
+
+  /* Tableau */
+  .tableau-expert {
+    width: 100%; border-collapse: collapse; font-size: 0.82rem;
+    background: var(--bg-card); border: 1px solid var(--border); border-radius: 4px;
+    overflow: hidden;
+  }
+  .tableau-expert th {
+    background: var(--gris-100); color: var(--text-sub); font-weight: 700;
+    text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--border);
+    font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.3px;
+    cursor: pointer; user-select: none; position: relative;
+  }
+  .tableau-expert th:hover { background: var(--bleu-france); color: white; }
+  .tableau-expert th .tri { margin-left: 4px; opacity: 0.5; }
+  .tableau-expert td { padding: 8px 12px; border-bottom: 1px solid var(--border); color: var(--text-main); }
+  .tableau-expert tr:last-child td { border-bottom: none; }
+  .tableau-expert tr:hover td { background: var(--gris-100); }
+
+  /* Notification toast */
+  .toast {
+    position: fixed; bottom: 24px; right: 24px; z-index: 999;
+    background: var(--gris-900); color: var(--gris-100);
+    padding: 12px 18px; border-radius: 4px; font-size: 0.85rem;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+    opacity: 0; transform: translateY(20px);
+    transition: opacity 0.3s, transform 0.3s;
+    pointer-events: none;
+  }
+  .toast.show { opacity: 1; transform: translateY(0); }
+
+  /* Pied de page */
+  .pied-page { background: var(--bg-card); border-top: 1px solid var(--border); padding: 32px 24px; margin-top: 48px; }
+  .pied-page-contenu {
+    max-width: 1440px; margin: 0 auto;
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 24px; font-size: 0.82rem; color: var(--text-sub);
+  }
+  .pied-page h4 { font-size: 0.85rem; font-weight: 700; color: var(--text-main); margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.4px; }
+  .pied-page a { color: var(--text-sub); text-decoration: none; display: block; padding: 3px 0; border-bottom: 1px solid transparent; }
+  .pied-page a:hover { color: var(--bleu-france); border-bottom-color: var(--bleu-france); }
+  .mention-legale {
+    max-width: 1440px; margin: 24px auto 0; padding-top: 20px;
+    border-top: 1px solid var(--border); font-size: 0.78rem;
+    color: var(--text-sub); text-align: center;
+  }
+
+  @media (max-width: 768px) {
+    .header-officiel h1 { font-size: 1.4rem; }
+    .grille-graphiques { grid-template-columns: 1fr; }
+    .panneau-controle { flex-direction: column; align-items: flex-start; }
+    .bandeau-etat .actions-etat { width: 100%; }
+  }
+</style>
+</head>
+<body>
+
+<div class="bandeau-etat">
+  <a href="#" class="marianne">
+    <span class="marianne-drapeau">
+      <span class="bleu"></span><span class="blanc"></span><span class="rouge"></span>
+    </span>
+    <span>
+      <div class="marianne-texte">République Française</div>
+      <div class="marianne-devise">Liberté · Égalité · Fraternité</div>
+    </span>
+  </a>
+  <div class="actions-etat">
+    <button class="btn-theme" id="btnTheme">🌙 Mode sombre</button>
+    <button class="btn-theme" id="btnRefresh">🔄 Actualiser</button>
+    <button class="btn-theme" id="btnExport">📥 Export CSV</button>
+  </div>
+</div>
+
+<div class="tricolore"></div>
+
+<header class="header-officiel">
+  <h1>⚡ Dashboard Expert ÉCO2mix</h1>
+  <p class="sous-titre">Analyse interactive du système électrique français — Données officielles RTE</p>
+  <div class="badges-officiels">
+    <span class="badge-officiel bleu">🇫🇷 France métropolitaine</span>
+    <span class="badge-officiel">⏱️ 15 minutes</span>
+    <span class="badge-officiel vert">📊 40+ indicateurs</span>
+    <span class="badge-officiel live">En direct</span>
+  </div>
+</header>
+
+<div class="conteneur">
+
+  <!-- Panneau de contrôle -->
+  <div class="panneau-controle">
+    <div class="controle-groupe">
+      <label for="selPeriode">Période :</label>
+      <select id="selPeriode">
+        <option value="24">24 heures</option>
+        <option value="48">48 heures</option>
+        <option value="72">3 jours</option>
+        <option value="168" selected>7 jours</option>
+        <option value="336">14 jours</option>
+      </select>
+    </div>
+    <div class="controle-groupe">
+      <label for="selFiliere">Filière principale :</label>
+      <select id="selFiliere">
+        <option value="consommation">Consommation</option>
+        <option value="nucleaire">Nucléaire</option>
+        <option value="eolien">Éolien</option>
+        <option value="solaire">Solaire</option>
+        <option value="hydraulique">Hydraulique</option>
+        <option value="gaz">Gaz</option>
+        <option value="taux_co2">Taux CO₂</option>
+      </select>
+    </div>
+    <div class="controle-groupe">
+      <label for="selLissage">Lissage :</label>
+      <select id="selLissage">
+        <option value="1">Aucun</option>
+        <option value="4">1 heure</option>
+        <option value="8">2 heures</option>
+        <option value="16">4 heures</option>
+      </select>
+    </div>
+    <button class="btn-action" id="btnAppliquer">Appliquer</button>
+    <button class="btn-secondaire" id="btnReset">Réinitialiser</button>
+  </div>
+
+  <div class="barre-info">
+    <div class="info-item"><strong>Dernière mesure :</strong> <span id="lastMeasure">Chargement…</span></div>
+    <div class="info-item">🕐 <span id="parisTime">--:--:--</span> (Paris)</div>
+    <div class="info-item">📊 <strong><span id="nbPoints">0</span></strong> points affichés</div>
+    <div class="info-item">Source : <strong>RTE éCO2mix</strong> via ODRE</div>
+  </div>
+
+  <div id="loadingMsg" class="message-chargement">Chargement des données officielles RTE en cours…</div>
+  <div id="errorMsg" class="message-erreur" style="display:none;"></div>
+
+  <div id="dashboard" style="display:none;">
+
+    <h2 class="section-titre">
+      <span class="titre-gauche">Indicateurs instantanés</span>
+    </h2>
+    <div class="grille-metriques" id="metricsGrid"></div>
+
+    <h2 class="section-titre">
+      <span class="titre-gauche">Analyse statistique sur la période</span>
+    </h2>
+    <p class="section-desc">Moyennes, écarts-types, minimums et maximums calculés sur la période sélectionnée.</p>
+    <div class="grille-metriques" id="statsGrid"></div>
+
+    <h2 class="section-titre">
+      <span class="titre-gauche">Indicateurs de performance</span>
+    </h2>
+    <p class="section-desc">Taux de charge, facteurs de charge, intensité carbone, part renouvelable.</p>
+    <div class="grille-metriques" id="perfGrid"></div>
+
+    <h2 class="section-titre">
+      <span class="titre-gauche">Graphique principal</span>
+      <div class="actions-section">
+        <button class="btn-mini" id="btnExportChart">📥 PNG</button>
+      </div>
+    </h2>
+    <div class="grille-graphiques">
+      <div class="carte-graphique" style="grid-column: 1 / -1;">
+        <h3>
+          <span id="titreGraphPrincipal">Évolution de la filière sélectionnée</span>
+          <button class="btn-mini" onclick="document.getElementById('chartPrincipal').requestFullscreen()">⛶ Plein écran</button>
+        </h3>
+        <div class="graphique-grand" id="chartPrincipal"></div>
+      </div>
+    </div>
+
+    <h2 class="section-titre"><span class="titre-gauche">Mix de production</span></h2>
+    <div class="grille-graphiques">
+      <div class="carte-graphique">
+        <h3>🥧 Répartition instantanée</h3>
+        <div class="graphique" id="chartMixPie"></div>
+      </div>
+      <div class="carte-graphique">
+        <h3>⚡ Production totale vs Consommation</h3>
+        <div class="graphique" id="chartProdConso"></div>
+      </div>
+      <div class="carte-graphique" style="grid-column: 1 / -1;">
+        <h3>📊 Évolution du mix (aires empilées)</h3>
+        <div class="graphique-grand" id="chartMixStacked"></div>
+      </div>
+    </div>
+
+    <h2 class="section-titre"><span class="titre-gauche">Évolution par filière</span></h2>
+    <div class="grille-graphiques">
+      <div class="carte-graphique"><h3>🔋 Consommation</h3><div class="graphique" id="chartConso"></div></div>
+      <div class="carte-graphique"><h3>☢️ Nucléaire</h3><div class="graphique" id="chartNucleaire"></div></div>
+      <div class="carte-graphique"><h3>💨 Éolien</h3><div class="graphique" id="chartEolien"></div></div>
+      <div class="carte-graphique"><h3>☀️ Solaire</h3><div class="graphique" id="chartSolaire"></div></div>
+      <div class="carte-graphique"><h3>💧 Hydraulique</h3><div class="graphique" id="chartHydraulique"></div></div>
+      <div class="carte-graphique"><h3>🔥 Gaz</h3><div class="graphique" id="chartGaz"></div></div>
+      <div class="carte-graphique"><h3>⚫ Charbon</h3><div class="graphique" id="chartCharbon"></div></div>
+      <div class="carte-graphique"><h3>🛢️ Fioul</h3><div class="graphique" id="chartFioul"></div></div>
+      <div class="carte-graphique"><h3>🌿 Bioénergies</h3><div class="graphique" id="chartBio"></div></div>
+    </div>
+
+    <h2 class="section-titre"><span class="titre-gauche">Indicateurs environnementaux</span></h2>
+    <div class="grille-graphiques">
+      <div class="carte-graphique"><h3>🌍 Taux de CO₂</h3><div class="graphique" id="chartCO2"></div></div>
+      <div class="carte-graphique"><h3>🌱 Part renouvelable</h3><div class="graphique" id="chartPartRenouv"></div></div>
+      <div class="carte-graphique"><h3>📊 Émissions cumulées</h3><div class="graphique" id="chartCumulCO2"></div></div>
+      <div class="carte-graphique"><h3>🇪🇺 Comparaison européenne</h3><div class="graphique" id="chartEuropeCO2"></div></div>
+    </div>
+
+    <h2 class="section-titre"><span class="titre-gauche">Échanges transfrontaliers</span></h2>
+    <div class="grille-graphiques">
+      <div class="carte-graphique"><h3>🔀 Solde global</h3><div class="graphique" id="chartEchPhysiques"></div></div>
+      <div class="carte-graphique"><h3>🇬🇧 Angleterre</h3><div class="graphique" id="chartEchUK"></div></div>
+      <div class="carte-graphique"><h3>🇪🇸 Espagne</h3><div class="graphique" id="chartEchES"></div></div>
+      <div class="carte-graphique"><h3>🇮🇹 Italie</h3><div class="graphique" id="chartEchIT"></div></div>
+      <div class="carte-graphique"><h3>🇨🇭 Suisse</h3><div class="graphique" id="chartEchCH"></div></div>
+      <div class="carte-graphique"><h3>🇩🇪🇧🇪 Allemagne-Belgique</h3><div class="graphique" id="chartEchDEBE"></div></div>
+    </div>
+
+    <h2 class="section-titre"><span class="titre-gauche">Prévisions</span></h2>
+    <div class="grille-graphiques">
+      <div class="carte-graphique" style="grid-column: 1 / -1;">
+        <h3>📊 Consommation : Réalisé vs Prévisions</h3>
+        <div class="graphique-grand" id="chartPrevision"></div>
+      </div>
+      <div class="carte-graphique"><h3>📉 Erreur de prévision J-1</h3><div class="graphique" id="chartErreurPrevision"></div></div>
+      <div class="carte-graphique"><h3>🔗 Matrice de corrélation</h3><div class="graphique" id="chartCorrelation"></div></div>
+    </div>
+
+    <h2 class="section-titre">
+      <span class="titre-gauche">Tableau récapitulatif</span>
+      <div class="actions-section">
+        <button class="btn-mini" id="btnExportTable">📥 CSV</button>
+      </div>
+    </h2>
+    <div style="overflow-x:auto;">
+      <table class="tableau-expert" id="tableauRecap">
+        <thead>
+          <tr>
+            <th data-sort="nom">Indicateur <span class="tri">↕</span></th>
+            <th data-sort="actuel">Actuel <span class="tri">↕</span></th>
+            <th data-sort="moyenne">Moyenne <span class="tri">↕</span></th>
+            <th data-sort="min">Min <span class="tri">↕</span></th>
+            <th data-sort="max">Max <span class="tri">↕</span></th>
+            <th data-sort="std">Écart-type <span class="tri">↕</span></th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+
+  </div>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<footer class="pied-page">
+  <div class="pied-page-contenu">
+    <div>
+      <h4>République Française</h4>
+      <p>Dashboard expert interactif pour l'analyse du système électrique.</p>
+    </div>
+    <div>
+      <h4>Sources officielles</h4>
+      <a href="https://www.rte-france.com" target="_blank">RTE — Réseau de Transport d'Électricité</a>
+      <a href="https://odre.opendatasoft.com" target="_blank">ODRE — Open Data Réseaux Énergies</a>
+      <a href="https://www.ecologie.gouv.fr" target="_blank">Ministère de la Transition écologique</a>
+    </div>
+    <div>
+      <h4>Données publiques</h4>
+      <a href="https://www.data.gouv.fr" target="_blank">data.gouv.fr</a>
+      <a href="https://www.cre.fr" target="_blank">CRE</a>
+      <a href="https://www.enedis.fr" target="_blank">Enedis Open Data</a>
+    </div>
+  </div>
+  <div class="mention-legale">
+    Dashboard expert interactif — Données éCO2mix de RTE, Licence Ouverte 2.0. Calculs statistiques côté client.
+  </div>
+</footer>
+
+<script>
+// ============================================================================
+// CONFIGURATION
+// ============================================================================
+const WORKER_URL = 'https://eco2mix.gunout.workers.dev/';
+const API_BASE = 'https://odre.opendatasoft.com/api/explore/v2.0/catalog/datasets/eco2mix-national-tr/records';
+const REFRESH_MS = 15 * 60 * 1000;
+
+const COLORS = {
+  bleu: '#000091', bleuClair: '#0055A4', rouge: '#E1000F', vert: '#18753c',
+  jaune: '#b34000', orange: '#FF9800', violet: '#7B1FA2', gris: '#666666', rose: '#D81B60'
+};
+
+const CAPACITES_INSTALLEES = {
+  nucleaire: 61370, eolien: 24500, solaire: 22000,
+  hydraulique: 25600, gaz: 12400, charbon: 1800, fioul: 2900, bioenergies: 2100
+};
+
+const INTENSITE_CARBONE_EUROPE = {
+  'France': 56, 'Suède': 41, 'Suisse': 58, 'Norvège': 26,
+  'Espagne': 174, 'Portugal': 184, 'Royaume-Uni': 217,
+  'Allemagne': 350, 'Italie': 315, 'Pays-Bas': 328,
+  'Belgique': 176, 'Pologne': 662
+};
+
+// État global
+const ETAT = {
+  records: [],
+  recordsFiltres: [],
+  periode: 168, // heures
+  filiere: 'consommation',
+  lissage: 1,
+  theme: 'light',
+  triTableau: { col: 'nom', dir: 'asc' }
+};
+
+// ============================================================================
+// APPEL API
+// ============================================================================
+async function fetchData(targetValid = 1000) {
+  const PAGE_SIZE = 100;
+  const MAX_PAGES = Math.ceil(targetValid / PAGE_SIZE) + 2;
+  let allRecords = [];
+
+  console.log('=== APPEL API ===');
+
+  for (let page = 0; page < MAX_PAGES; page++) {
+    const offset = page * PAGE_SIZE;
+    const apiUrl = API_BASE + '?limit=' + PAGE_SIZE + '&offset=' + offset + '&order_by=date_heure%20desc';
+    const url = WORKER_URL + '?apiurl=' + encodeURIComponent(apiUrl);
+
+    try {
+      const response = await fetch(url);
+      if (!response.ok) { console.warn('Page ' + page + ' : HTTP ' + response.status); break; }
+      const data = await response.json();
+      if (!data.records || data.records.length === 0) break;
+
+      const extracted = data.records.map(item =>
+        item.record && item.record.fields ? item.record.fields :
+        (item.fields ? item.fields : item)
+      );
+
+      allRecords = allRecords.concat(extracted);
+      console.log('Page ' + page + ' : ' + extracted.length + ' (total : ' + allRecords.length + ')');
+      if (data.records.length < PAGE_SIZE) break;
+    } catch (err) { console.warn('Erreur page ' + page + ':', err.message); break; }
+  }
+
+  const valid = allRecords.filter(r =>
+    (r.consommation !== null && r.consommation !== undefined) ||
+    (r.nucleaire !== null && r.nucleaire !== undefined)
+  );
+
+  console.log('✅ ' + valid.length + ' enregistrements valides sur ' + allRecords.length);
+  if (valid.length === 0) throw new Error('Aucun enregistrement valide.');
+
+  valid.sort((a, b) => new Date(a.date_heure) - new Date(b.date_heure));
+  return valid;
+}
+
+// ============================================================================
+// OUTILS STATISTIQUES
+// ============================================================================
+function stats(arr) {
+  const clean = arr.filter(v => v !== null && v !== undefined && !isNaN(v));
+  if (clean.length === 0) return { mean: 0, std: 0, min: 0, max: 0, sum: 0, median: 0, count: 0 };
+  const n = clean.length;
+  const sum = clean.reduce((a, b) => a + b, 0);
+  const mean = sum / n;
+  const variance = clean.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / n;
+  const std = Math.sqrt(variance);
+  const sorted = [...clean].sort((a, b) => a - b);
+  const median = n % 2 === 0 ? (sorted[n/2 - 1] + sorted[n/2]) / 2 : sorted[Math.floor(n/2)];
+  return { mean, std, median, sum, count: n, min: Math.min(...clean), max: Math.max(...clean) };
+}
+
+function correlation(x, y) {
+  const clean = [];
+  const n = Math.min(x.length, y.length);
+  for (let i = 0; i < n; i++) {
+    if (x[i] !== null && y[i] !== null && !isNaN(x[i]) && !isNaN(y[i])) clean.push([x[i], y[i]]);
+  }
+  if (clean.length < 3) return 0;
+  const mx = clean.reduce((a, b) => a + b[0], 0) / clean.length;
+  const my = clean.reduce((a, b) => a + b[1], 0) / clean.length;
+  let num = 0, dx = 0, dy = 0;
+  clean.forEach(([xi, yi]) => { num += (xi - mx) * (yi - my); dx += Math.pow(xi - mx, 2); dy += Math.pow(yi - my, 2); });
+  if (dx === 0 || dy === 0) return 0;
+  return num / Math.sqrt(dx * dy);
+}
+
+function movingAverage(arr, window) {
+  if (window <= 1) return arr;
+  const result = [];
+  for (let i = 0; i < arr.length; i++) {
+    if (i < window - 1) { result.push(null); continue; }
+    let sum = 0, count = 0;
+    for (let j = i - window + 1; j <= i; j++) {
+      if (arr[j] !== null && !isNaN(arr[j])) { sum += arr[j]; count++; }
+    }
+    result.push(count > 0 ? sum / count : null);
+  }
+  return result;
+}
+
+// ============================================================================
+// CALCULS EXPERTS
+// ============================================================================
+function calculerIndicateurs(records) {
+  const last = records[records.length - 1];
+  const series = {
+    conso: records.map(r => r.consommation),
+    nucleaire: records.map(r => r.nucleaire),
+    eolien: records.map(r => r.eolien),
+    solaire: records.map(r => r.solaire),
+    hydraulique: records.map(r => r.hydraulique),
+    gaz: records.map(r => r.gaz),
+    charbon: records.map(r => r.charbon),
+    fioul: records.map(r => r.fioul),
+    bio: records.map(r => r.bioenergies),
+    co2: records.map(r => r.taux_co2),
+    ech: records.map(r => r.ech_physiques)
+  };
+
+  const totalProd = (last.nucleaire||0) + (last.eolien||0) + (last.solaire||0) +
+                    (last.hydraulique||0) + (last.gaz||0) + (last.charbon||0) +
+                    (last.fioul||0) + (last.bioenergies||0);
+
+  const renouv = (last.eolien||0) + (last.solaire||0) + (last.hydraulique||0) + (last.bioenergies||0);
+  const partRenouv = totalProd > 0 ? (renouv / totalProd * 100) : 0;
+  const basCarbone = (last.nucleaire||0) + renouv;
+  const partBasCarbone = totalProd > 0 ? (basCarbone / totalProd * 100) : 0;
+  const fossile = (last.gaz||0) + (last.charbon||0) + (last.fioul||0);
+  const partFossile = totalProd > 0 ? (fossile / totalProd * 100) : 0;
+
+  const tauxCharge = {
+    nucleaire: CAPACITES_INSTALLEES.nucleaire > 0 ? ((last.nucleaire||0) / CAPACITES_INSTALLEES.nucleaire * 100) : 0,
+    eolien: CAPACITES_INSTALLEES.eolien > 0 ? ((last.eolien||0) / CAPACITES_INSTALLEES.eolien * 100) : 0,
+    solaire: CAPACITES_INSTALLEES.solaire > 0 ? ((last.solaire||0) / CAPACITES_INSTALLEES.solaire * 100) : 0,
+    hydraulique: CAPACITES_INSTALLEES.hydraulique > 0 ? ((last.hydraulique||0) / CAPACITES_INSTALLEES.hydraulique * 100) : 0,
+    gaz: CAPACITES_INSTALLEES.gaz > 0 ? ((last.gaz||0) / CAPACITES_INSTALLEES.gaz * 100) : 0
+  };
+
+  let emissionsCumulees = 0;
+  records.forEach(r => {
+    const prod = (r.nucleaire||0) + (r.eolien||0) + (r.solaire||0) + (r.hydraulique||0) +
+                 (r.gaz||0) + (r.charbon||0) + (r.fioul||0) + (r.bioenergies||0);
+    emissionsCumulees += (prod * 0.25 * (r.taux_co2 || 0)) / 1000;
+  });
+
+  const statsConso = stats(series.conso);
+  const volatiliteConso = statsConso.mean > 0 ? (statsConso.std / statsConso.mean * 100) : 0;
+  const statsEolien = stats(series.eolien);
+  const volatiliteEolien = statsEolien.mean > 0 ? (statsEolien.std / statsEolien.mean * 100) : 0;
+  const ratioPicMin = statsConso.min > 0 ? (statsConso.max / statsConso.min) : 0;
+  const autonomie = last.consommation > 0 ? (totalProd / last.consommation * 100) : 0;
+  const soldeExportateur = last.ech_physiques || 0;
+
+  return {
+    last, series, totalProd, renouv, partRenouv, basCarbone, partBasCarbone,
+    fossile, partFossile, tauxCharge, intensiteCarbone: last.taux_co2 || 0,
+    emissionsCumulees, volatiliteConso, volatiliteEolien,
+    picConso: statsConso.max, minConso: statsConso.min, ratioPicMin,
+    soldeExportateur, autonomie,
+    statsConso, statsNucleaire: stats(series.nucleaire), statsEolien,
+    statsSolaire: stats(series.solaire), statsHydro: stats(series.hydraulique),
+    statsGaz: stats(series.gaz), statsCO2: stats(series.co2), statsEch: stats(series.ech),
+    corrEolienSolaire: correlation(series.eolien, series.solaire),
+    corrConsoNucleaire: correlation(series.conso, series.nucleaire),
+    corrConsoEolien: correlation(series.conso, series.eolien),
+    corrConsoSolaire: correlation(series.conso, series.solaire)
+  };
+}
+
+// ============================================================================
+// HORLOGE
+// ============================================================================
+function updateClock() {
+  document.getElementById('parisTime').textContent = new Date().toLocaleTimeString('fr-FR', {
+    timeZone: 'Europe/Paris', hour: '2-digit', minute: '2-digit', second: '2-digit'
+  });
+}
+setInterval(updateClock, 1000);
+updateClock();
+
+// ============================================================================
+// NOTIFICATIONS
+// ============================================================================
+function toast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), 2500);
+}
+
+// ============================================================================
+// MÉTRIQUES
+// ============================================================================
+function renderMetrics(ind) {
+  const last = ind.last;
+  const metrics = [
+    { label: 'Consommation', value: (last.consommation||0).toLocaleString('fr-FR'), unit: 'MW', cls: 'bleu', tip: 'Puissance appelée sur le réseau' },
+    { label: 'Production totale', value: ind.totalProd.toLocaleString('fr-FR'), unit: 'MW', cls: 'neutre', tip: 'Somme de toutes les filières' },
+    { label: 'Nucléaire', value: (last.nucleaire||0).toLocaleString('fr-FR'), unit: 'MW', cls: 'rouge', tip: 'Production nucléaire' },
+    { label: 'Éolien', value: (last.eolien||0).toLocaleString('fr-FR'), unit: 'MW', cls: 'vert', tip: 'Production éolienne terrestre + offshore' },
+    { label: 'Solaire', value: (last.solaire||0).toLocaleString('fr-FR'), unit: 'MW', cls: 'jaune', tip: 'Production photovoltaïque' },
+    { label: 'Hydraulique', value: (last.hydraulique||0).toLocaleString('fr-FR'), unit: 'MW', cls: 'bleu', tip: 'Production hydraulique' },
+    { label: 'Gaz', value: (last.gaz||0).toLocaleString('fr-FR'), unit: 'MW', cls: 'rouge', tip: 'Production à partir de gaz naturel' },
+    { label: 'Taux CO₂', value: (last.taux_co2||0).toLocaleString('fr-FR'), unit: 'g/kWh', cls: 'vert', tip: 'Intensité carbone de l\'électricité' },
+    { label: 'Part renouvelable', value: ind.partRenouv.toFixed(1), unit: '%', cls: 'vert', tip: 'Part des renouvelables dans la production' },
+    { label: 'Échanges physiques', value: (last.ech_physiques||0).toLocaleString('fr-FR'), unit: 'MW', cls: 'neutre', tip: 'Positif = export, négatif = import' }
+  ];
+
+  document.getElementById('metricsGrid').innerHTML = metrics.map(m =>
+    '<div class="carte-metrique ' + m.cls + '">' +
+      '<div class="tooltip">' + m.tip + '</div>' +
+      '<div class="label">' + m.label + '</div>' +
+      '<div class="valeur">' + m.value + '</div>' +
+      '<div class="unite">' + m.unit + '</div>' +
+    '</div>'
+  ).join('');
+
+  document.getElementById('lastMeasure').textContent = new Date(last.date_heure).toLocaleString('fr-FR', {
+    timeZone: 'Europe/Paris', dateStyle: 'short', timeStyle: 'short'
+  });
+}
+
+function renderStats(ind) {
+  const s = [
+    { label: 'Conso moyenne', value: ind.statsConso.mean.toFixed(0), unit: 'MW', cls: 'bleu' },
+    { label: 'Conso max', value: ind.statsConso.max.toFixed(0), unit: 'MW', cls: 'rouge' },
+    { label: 'Conso min', value: ind.statsConso.min.toFixed(0), unit: 'MW', cls: 'vert' },
+    { label: 'Écart-type conso', value: ind.statsConso.std.toFixed(0), unit: 'MW', cls: 'neutre' },
+    { label: 'Nucléaire moyen', value: ind.statsNucleaire.mean.toFixed(0), unit: 'MW', cls: 'rouge' },
+    { label: 'Éolien moyen', value: ind.statsEolien.mean.toFixed(0), unit: 'MW', cls: 'vert' },
+    { label: 'Solaire moyen', value: ind.statsSolaire.mean.toFixed(0), unit: 'MW', cls: 'jaune' },
+    { label: 'Hydraulique moyen', value: ind.statsHydro.mean.toFixed(0), unit: 'MW', cls: 'bleu' },
+    { label: 'CO₂ moyen', value: ind.statsCO2.mean.toFixed(1), unit: 'g/kWh', cls: 'vert' },
+    { label: 'CO₂ max', value: ind.statsCO2.max.toFixed(0), unit: 'g/kWh', cls: 'rouge' }
+  ];
+  document.getElementById('statsGrid').innerHTML = s.map(m =>
+    '<div class="carte-metrique ' + m.cls + '">' +
+      '<div class="label">' + m.label + '</div>' +
+      '<div class="valeur">' + m.value + '</div>' +
+      '<div class="unite">' + m.unit + '</div>' +
+    '</div>'
+  ).join('');
+}
+
+function renderPerf(ind) {
+  const p = [
+    { label: 'Taux charge nucléaire', value: ind.tauxCharge.nucleaire.toFixed(1), unit: '%', cls: 'rouge' },
+    { label: 'Facteur charge éolien', value: ind.tauxCharge.eolien.toFixed(1), unit: '%', cls: 'vert' },
+    { label: 'Facteur charge solaire', value: ind.tauxCharge.solaire.toFixed(1), unit: '%', cls: 'jaune' },
+    { label: 'Facteur charge hydraulique', value: ind.tauxCharge.hydraulique.toFixed(1), unit: '%', cls: 'bleu' },
+    { label: 'Part bas-carbone', value: ind.partBasCarbone.toFixed(1), unit: '%', cls: 'vert' },
+    { label: 'Part fossile', value: ind.partFossile.toFixed(1), unit: '%', cls: 'rouge' },
+    { label: 'Émissions cumulées', value: (ind.emissionsCumulees/1000).toFixed(1), unit: 'ktCO₂', cls: 'rouge' },
+    { label: 'Volatilité conso', value: ind.volatiliteConso.toFixed(1), unit: '%', cls: 'neutre' },
+    { label: 'Volatilité éolien', value: ind.volatiliteEolien.toFixed(1), unit: '%', cls: 'vert' },
+    { label: 'Ratio pic/min', value: ind.ratioPicMin.toFixed(2), unit: '×', cls: 'neutre' },
+    { label: 'Autonomie énergétique', value: ind.autonomie.toFixed(1), unit: '%', cls: 'bleu' },
+    { label: 'Solde exportateur', value: ind.soldeExportateur.toFixed(0), unit: 'MW', cls: 'vert' }
+  ];
+  document.getElementById('perfGrid').innerHTML = p.map(m =>
+    '<div class="carte-metrique ' + m.cls + '">' +
+      '<div class="label">' + m.label + '</div>' +
+      '<div class="valeur">' + m.value + '</div>' +
+      '<div class="unite">' + m.unit + '</div>' +
+    '</div>'
+  ).join('');
+}
+
+// ============================================================================
+// GRAPHIQUES
+// ============================================================================
+const plotConfig = { responsive: true, displayModeBar: false };
+
+function baseLayout(yTitle) {
+  const isDark = ETAT.theme === 'dark';
+  return {
+    margin: { t: 10, r: 15, b: 35, l: 55 },
+    xaxis: { gridcolor: isDark ? '#333' : '#e5e5e5', tickfont: { size: 10, color: isDark ? '#d0d0d0' : '#3a3a3a' } },
+    yaxis: { title: { text: yTitle, font: { size: 11, color: isDark ? '#a0a0a0' : '#666' } }, gridcolor: isDark ? '#333' : '#e5e5e5', tickfont: { size: 10, color: isDark ? '#d0d0d0' : '#3a3a3a' } },
+    hovermode: 'x unified',
+    template: isDark ? 'plotly_dark' : 'plotly_white',
+    showlegend: false,
+    font: { family: 'Marianne, Segoe UI, Roboto, sans-serif' },
+    paper_bgcolor: 'transparent',
+    plot_bgcolor: 'transparent'
+  };
+}
+
+function lineChart(divId, xData, yData, color, fill) {
+  const cleanX = [], cleanY = [];
+  for (let i = 0; i < xData.length; i++) {
+    if (yData[i] !== null && yData[i] !== undefined) { cleanX.push(xData[i]); cleanY.push(yData[i]); }
+  }
+  if (cleanY.length === 0) { cleanX.push('Pas de données'); cleanY.push(0); }
+  Plotly.newPlot(divId, [{
+    x: cleanX, y: cleanY, type: 'scatter', mode: 'lines',
+    line: { color: color, width: 2 },
+    fill: fill ? 'tozeroy' : 'none',
+    fillcolor: fill ? color + '22' : undefined,
+    hovertemplate: '%{y:,.0f}<extra></extra>'
+  }], baseLayout(''), plotConfig);
+}
+
+function renderChartPrincipal(records, filiere, lissage) {
+  const x = records.map(r => new Date(r.date_heure).toLocaleString('fr-FR', {
+    timeZone: 'Europe/Paris', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit'
+  }));
+  const y = records.map(r => r[filiere]);
+  const yLisse = movingAverage(y, lissage);
+
+  const traces = [];
+  if (lissage > 1) {
+    traces.push({
+      x, y, type: 'scatter', mode: 'lines', name: 'Brut',
+      line: { color: COLORS.gris + '44', width: 1 }
+    });
+  }
+  traces.push({
+    x, y: yLisse, type: 'scatter', mode: 'lines',
+    name: lissage > 1 ? 'Lissé (' + lissage + ' pts)' : 'Série',
+    line: { color: COLORS.bleu, width: 2.5 },
+    fill: 'tozeroy', fillcolor: COLORS.bleu + '22',
+    hovertemplate: '%{y:,.0f}<extra></extra>'
+  });
+
+  Plotly.newPlot('chartPrincipal', traces, {
+    ...baseLayout(''),
+    showlegend: lissage > 1,
+    legend: { orientation: 'h', y: 1.1, x: 0.5, xanchor: 'center', font: { size: 10 } }
+  }, plotConfig);
+
+  const labels = {
+    consommation: 'Consommation (MW)', nucleaire: 'Nucléaire (MW)',
+    eolien: 'Éolien (MW)', solaire: 'Solaire (MW)',
+    hydraulique: 'Hydraulique (MW)', gaz: 'Gaz (MW)',
+    taux_co2: 'Taux CO₂ (g/kWh)'
+  };
+  document.getElementById('titreGraphPrincipal').textContent = labels[filiere] || filiere;
+}
+
+function renderChartMixPie(ind) {
+  const last = ind.last;
+  const labels = ['Nucléaire', 'Éolien', 'Solaire', 'Hydraulique', 'Gaz', 'Charbon', 'Fioul', 'Bioénergies'];
+  const values = [
+    Math.max(0, last.nucleaire||0), Math.max(0, last.eolien||0), Math.max(0, last.solaire||0),
+    Math.max(0, last.hydraulique||0), Math.max(0, last.gaz||0), Math.max(0, last.charbon||0),
+    Math.max(0, last.fioul||0), Math.max(0, last.bioenergies||0)
+  ];
+  const colors = [COLORS.bleu, COLORS.vert, COLORS.jaune, COLORS.bleuClair, COLORS.rouge, '#333', '#888', '#66BB6A'];
+  Plotly.newPlot('chartMixPie', [{
+    labels, values, type: 'pie', hole: 0.4,
+    marker: { colors }, textinfo: 'label+percent',
+    textfont: { size: 11 }, textposition: 'outside',
+    hovertemplate: '%{label}<br>%{value:,.0f} MW<br>%{percent}<extra></extra>'
+  }], { margin: { t: 10, r: 10, b: 10, l: 10 }, showlegend: false, template: ETAT.theme === 'dark' ? 'plotly_dark' : 'plotly_white', paper_bgcolor: 'transparent', plot_bgcolor: 'transparent' }, plotConfig);
+}
+
+function renderChartProdConso(ind) {
+  Plotly.newPlot('chartProdConso', [{
+    x: ['Production', 'Consommation'],
+    y: [ind.totalProd, ind.last.consommation||0],
+    type: 'bar',
+    marker: { color: [COLORS.bleu, COLORS.rouge] },
+    text: [ind.totalProd.toLocaleString('fr-FR'), (ind.last.consommation||0).toLocaleString('fr-FR')],
+    textposition: 'outside',
+    hovertemplate: '%{x}<br>%{y:,.0f} MW<extra></extra>'
+  }], { ...baseLayout('MW'), showlegend: false }, plotConfig);
+}
+
+function renderChartMixStacked(records) {
+  const x = records.map(r => new Date(r.date_heure).toLocaleString('fr-FR', {
+    timeZone: 'Europe/Paris', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit'
+  }));
+  const filieres = [
+    { name: 'Nucléaire', field: 'nucleaire', color: COLORS.bleu },
+    { name: 'Hydraulique', field: 'hydraulique', color: COLORS.bleuClair },
+    { name: 'Gaz', field: 'gaz', color: COLORS.rouge },
+    { name: 'Éolien', field: 'eolien', color: COLORS.vert },
+    { name: 'Solaire', field: 'solaire', color: COLORS.jaune },
+    { name: 'Bioénergies', field: 'bioenergies', color: '#66BB6A' }
+  ];
+  const traces = filieres.map(f => ({
+    x, y: records.map(r => Math.max(0, r[f.field]||0)),
+    type: 'scatter', mode: 'lines', name: f.name,
+    line: { color: f.color, width: 0 },
+    stackgroup: 'one',
+    hovertemplate: '%{y:,.0f} MW<extra>' + f.name + '</extra>'
+  }));
+  Plotly.newPlot('chartMixStacked', traces, {
+    ...baseLayout('MW'),
+    showlegend: true,
+    legend: { orientation: 'h', y: 1.1, x: 0.5, xanchor: 'center', font: { size: 10 } }
+  }, plotConfig);
+}
+
+function renderTimeSeries(divId, records, field, color) {
+  const x = records.map(r => new Date(r.date_heure).toLocaleString('fr-FR', {
+    timeZone: 'Europe/Paris', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit'
+  }));
+  lineChart(divId, x, records.map(r => r[field]), color, true);
+}
+
+function renderChartPartRenouv(records) {
+  const x = records.map(r => new Date(r.date_heure).toLocaleString('fr-FR', {
+    timeZone: 'Europe/Paris', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit'
+  }));
+  const y = records.map(r => {
+    const renouv = (r.eolien||0) + (r.solaire||0) + (r.hydraulique||0) + (r.bioenergies||0);
+    const total = renouv + (r.nucleaire||0) + (r.gaz||0) + (r.charbon||0) + (r.fioul||0);
+    return total > 0 ? (renouv / total * 100) : 0;
+  });
+  lineChart('chartPartRenouv', x, y, COLORS.vert, true);
+}
+
+function renderChartCumulCO2(records) {
+  const x = records.map(r => new Date(r.date_heure).toLocaleString('fr-FR', {
+    timeZone: 'Europe/Paris', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit'
+  }));
+  let cumul = 0;
+  const y = records.map(r => {
+    const prod = (r.nucleaire||0) + (r.eolien||0) + (r.solaire||0) + (r.hydraulique||0) +
+                 (r.gaz||0) + (r.charbon||0) + (r.fioul||0) + (r.bioenergies||0);
+    cumul += (prod * 0.25 * (r.taux_co2 || 0)) / 1000;
+    return cumul / 1000;
+  });
+  lineChart('chartCumulCO2', x, y, COLORS.rouge, true);
+}
+
+function renderChartEuropeCO2() {
+  const entries = Object.entries(INTENSITE_CARBONE_EUROPE).sort((a, b) => a[1] - b[1]);
+  const labels = entries.map(e => e[0]);
+  const values = entries.map(e => e[1]);
+  const colors = labels.map(l => l === 'France' ? COLORS.bleu : COLORS.gris + '88');
+  Plotly.newPlot('chartEuropeCO2', [{
+    x: values, y: labels, type: 'bar', orientation: 'h',
+    marker: { color: colors },
+    text: values.map(v => v + ' g'),
+    textposition: 'outside',
+    hovertemplate: '%{y}<br>%{x} gCO₂/kWh<extra></extra>'
+  }], {
+    ...baseLayout('gCO₂/kWh'),
+    margin: { t: 10, r: 50, b: 35, l: 110 },
+    yaxis: { tickfont: { size: 10 } }
+  }, plotConfig);
+}
+
+function renderChartPrevision(records) {
+  const x = records.map(r => new Date(r.date_heure).toLocaleString('fr-FR', {
+    timeZone: 'Europe/Paris', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit'
+  }));
+  Plotly.newPlot('chartPrevision', [
+    { x, y: records.map(r => r.consommation), type: 'scatter', mode: 'lines', name: 'Réalisé', line: { color: COLORS.bleu, width: 2 }, hovertemplate: '%{y:,.0f} MW<extra>Réalisé</extra>' },
+    { x, y: records.map(r => r.prevision_j1), type: 'scatter', mode: 'lines', name: 'Prévision J-1', line: { color: COLORS.rouge, width: 1.5, dash: 'dash' }, hovertemplate: '%{y:,.0f} MW<extra>Prév J-1</extra>' },
+    { x, y: records.map(r => r.prevision_j), type: 'scatter', mode: 'lines', name: 'Prévision J', line: { color: COLORS.jaune, width: 1.5, dash: 'dot' }, hovertemplate: '%{y:,.0f} MW<extra>Prév J</extra>' }
+  ], { ...baseLayout('MW'), showlegend: true, legend: { orientation: 'h', y: 1.1, x: 0.5, xanchor: 'center', font: { size: 10 } } }, plotConfig);
+}
+
+function renderChartErreurPrevision(records) {
+  const x = records.map(r => new Date(r.date_heure).toLocaleString('fr-FR', {
+    timeZone: 'Europe/Paris', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit'
+  }));
+  const y = records.map(r => {
+    if (r.consommation !== null && r.prevision_j1 !== null && r.prevision_j1 !== undefined) {
+      return r.consommation - r.prevision_j1;
+    }
+    return null;
+  });
+  lineChart('chartErreurPrevision', x, y, COLORS.jaune, true);
+}
+
+function renderChartCorrelation(records) {
+  const fields = ['consommation', 'nucleaire', 'eolien', 'solaire', 'hydraulique', 'gaz', 'taux_co2'];
+  const labels = ['Conso', 'Nucl.', 'Éolien', 'Solaire', 'Hydro', 'Gaz', 'CO₂'];
+  const series = fields.map(f => records.map(r => r[f]));
+  const matrix = [];
+  for (let i = 0; i < fields.length; i++) {
+    const row = [];
+    for (let j = 0; j < fields.length; j++) row.push(correlation(series[i], series[j]));
+    matrix.push(row);
+  }
+  Plotly.newPlot('chartCorrelation', [{
+    z: matrix, x: labels, y: labels, type: 'heatmap',
+    colorscale: [[0, COLORS.rouge], [0.5, '#ffffff'], [1, COLORS.bleu]],
+    zmin: -1, zmax: 1,
+    text: matrix.map(row => row.map(v => v.toFixed(2))),
+    texttemplate: '%{text}', textfont: { size: 10 },
+    colorbar: { title: 'r', titleside: 'right', thickness: 12 }
+  }], { ...baseLayout(''), margin: { t: 10, r: 20, b: 40, l: 80 } }, plotConfig);
+}
+
+// ============================================================================
+// TABLEAU RÉCAPITULATIF (triable)
+// ============================================================================
+function renderTableauRecap(ind) {
+  const rows = [
+    { nom: 'Consommation', actuel: ind.last.consommation, stats: ind.statsConso, unit: 'MW' },
+    { nom: 'Nucléaire', actuel: ind.last.nucleaire, stats: ind.statsNucleaire, unit: 'MW' },
+    { nom: 'Éolien', actuel: ind.last.eolien, stats: ind.statsEolien, unit: 'MW' },
+    { nom: 'Solaire', actuel: ind.last.solaire, stats: ind.statsSolaire, unit: 'MW' },
+    { nom: 'Hydraulique', actuel: ind.last.hydraulique, stats: ind.statsHydro, unit: 'MW' },
+    { nom: 'Gaz', actuel: ind.last.gaz, stats: ind.statsGaz, unit: 'MW' },
+    { nom: 'Taux CO₂', actuel: ind.last.taux_co2, stats: ind.statsCO2, unit: 'g/kWh' },
+    { nom: 'Échanges', actuel: ind.last.ech_physiques, stats: ind.statsEch, unit: 'MW' }
+  ];
+
+  // Tri
+  const dir = ETAT.triTableau.dir === 'asc' ? 1 : -1;
+  rows.sort((a, b) => {
+    const col = ETAT.triTableau.col;
+    if (col === 'nom') return a.nom.localeCompare(b.nom) * dir;
+    if (col === 'actuel') return ((a.actuel||0) - (b.actuel||0)) * dir;
+    if (col === 'moyenne') return (a.stats.mean - b.stats.mean) * dir;
+    if (col === 'min') return (a.stats.min - b.stats.min) * dir;
+    if (col === 'max') return (a.stats.max - b.stats.max) * dir;
+    if (col === 'std') return (a.stats.std - b.stats.std) * dir;
+    return 0;
+  });
+
+  document.querySelector('#tableauRecap tbody').innerHTML = rows.map(r =>
+    '<tr>' +
+      '<td><strong>' + r.nom + '</strong></td>' +
+      '<td>' + (r.actuel !== null && r.actuel !== undefined ? r.actuel.toFixed(1) : '—') + ' ' + r.unit + '</td>' +
+      '<td>' + r.stats.mean.toFixed(1) + ' ' + r.unit + '</td>' +
+      '<td>' + r.stats.min.toFixed(1) + ' ' + r.unit + '</td>' +
+      '<td>' + r.stats.max.toFixed(1) + ' ' + r.unit + '</td>' +
+      '<td>' + r.stats.std.toFixed(1) + ' ' + r.unit + '</td>' +
+    '</tr>'
+  ).join('');
+}
+
+// ============================================================================
+// FILTRAGE
+// ============================================================================
+function filtrerParPeriode(records, heures) {
+  if (records.length === 0) return records;
+  const derniere = new Date(records[records.length - 1].date_heure);
+  const seuil = new Date(derniere.getTime() - heures * 3600 * 1000);
+  return records.filter(r => new Date(r.date_heure) >= seuil);
+}
+
+// ============================================================================
+// RENDU PRINCIPAL
+// ============================================================================
+function renderAll() {
+  const records = ETAT.recordsFiltres;
+  if (records.length === 0) { toast('Aucune donnée à afficher'); return; }
+
+  const ind = calculerIndicateurs(records);
+
+  renderMetrics(ind);
+  renderStats(ind);
+  renderPerf(ind);
+  renderChartPrincipal(records, ETAT.filiere, ETAT.lissage);
+  renderChartMixPie(ind);
+  renderChartProdConso(ind);
+  renderChartMixStacked(records);
+
+  renderTimeSeries('chartConso', records, 'consommation', COLORS.bleu);
+  renderTimeSeries('chartNucleaire', records, 'nucleaire', COLORS.rouge);
+  renderTimeSeries('chartEolien', records, 'eolien', COLORS.vert);
+  renderTimeSeries('chartSolaire', records, 'solaire', COLORS.jaune);
+  renderTimeSeries('chartHydraulique', records, 'hydraulique', COLORS.bleuClair);
+  renderTimeSeries('chartGaz', records, 'gaz', COLORS.rouge);
+  renderTimeSeries('chartCharbon', records, 'charbon', COLORS.gris);
+  renderTimeSeries('chartFioul', records, 'fioul', '#8B4513');
+  renderTimeSeries('chartBio', records, 'bioenergies', '#66BB6A');
+
+  renderTimeSeries('chartCO2', records, 'taux_co2', COLORS.vert);
+  renderChartPartRenouv(records);
+  renderChartCumulCO2(records);
+  renderChartEuropeCO2();
+
+  renderTimeSeries('chartEchPhysiques', records, 'ech_physiques', COLORS.bleu);
+  renderTimeSeries('chartEchUK', records, 'ech_comm_angleterre', COLORS.bleu);
+  renderTimeSeries('chartEchES', records, 'ech_comm_espagne', COLORS.rouge);
+  renderTimeSeries('chartEchIT', records, 'ech_comm_italie', COLORS.vert);
+  renderTimeSeries('chartEchCH', records, 'ech_comm_suisse', COLORS.jaune);
+  renderTimeSeries('chartEchDEBE', records, 'ech_comm_allemagne_belgique', COLORS.violet);
+
+  renderChartPrevision(records);
+  renderChartErreurPrevision(records);
+  renderChartCorrelation(records);
+  renderTableauRecap(ind);
+
+  document.getElementById('nbPoints').textContent = records.length;
+  console.log('✅ Rendu terminé — ' + records.length + ' points');
+}
+
+// ============================================================================
+// ÉVÉNEMENTS
+// ============================================================================
+document.getElementById('btnAppliquer').addEventListener('click', () => {
+  ETAT.periode = parseInt(document.getElementById('selPeriode').value);
+  ETAT.filiere = document.getElementById('selFiliere').value;
+  ETAT.lissage = parseInt(document.getElementById('selLissage').value);
+  ETAT.recordsFiltres = filtrerParPeriode(ETAT.records, ETAT.periode);
+  renderAll();
+  toast('Filtres appliqués : ' + ETAT.periode + 'h, ' + ETAT.filiere);
+});
+
+document.getElementById('btnReset').addEventListener('click', () => {
+  document.getElementById('selPeriode').value = '168';
+  document.getElementById('selFiliere').value = 'consommation';
+  document.getElementById('selLissage').value = '1';
+  ETAT.periode = 168; ETAT.filiere = 'consommation'; ETAT.lissage = 1;
+  ETAT.recordsFiltres = filtrerParPeriode(ETAT.records, ETAT.periode);
+  renderAll();
+  toast('Filtres réinitialisés');
+});
+
+document.getElementById('btnTheme').addEventListener('click', () => {
+  ETAT.theme = ETAT.theme === 'light' ? 'dark' : 'light';
+  document.documentElement.setAttribute('data-theme', ETAT.theme);
+  document.getElementById('btnTheme').textContent = ETAT.theme === 'light' ? '🌙 Mode sombre' : '☀️ Mode clair';
+  renderAll();
+});
+
+document.getElementById('btnRefresh').addEventListener('click', async () => {
+  const btn = document.getElementById('btnRefresh');
+  btn.disabled = true;
+  btn.textContent = '⏳ Chargement…';
+  try {
+    ETAT.records = await fetchData(1000);
+    ETAT.recordsFiltres = filtrerParPeriode(ETAT.records, ETAT.periode);
+    renderAll();
+    toast('Données actualisées');
+  } catch (err) {
+    toast('Erreur : ' + err.message);
+  }
+  btn.disabled = false;
+  btn.textContent = '🔄 Actualiser';
+});
+
+document.getElementById('btnExport').addEventListener('click', () => {
+  const records = ETAT.recordsFiltres;
+  if (records.length === 0) { toast('Aucune donnée à exporter'); return; }
+  const keys = Object.keys(records[0]);
+  const csv = [keys.join(';')].concat(
+    records.map(r => keys.map(k => {
+      const v = r[k];
+      return v === null || v === undefined ? '' : String(v).replace(';', ',');
+    }).join(';'))
+  ).join('\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'eco2mix_' + new Date().toISOString().slice(0,10) + '.csv';
+  a.click();
+  URL.revokeObjectURL(url);
+  toast('Export CSV téléchargé');
+});
+
+document.getElementById('btnExportTable').addEventListener('click', () => {
+  const rows = document.querySelectorAll('#tableauRecap tbody tr');
+  const csv = ['Indicateur;Actuel;Moyenne;Min;Max;Écart-type'];
+  rows.forEach(tr => {
+    const cells = Array.from(tr.querySelectorAll('td')).map(td => td.textContent.trim());
+    csv.push(cells.join(';'));
+  });
+  const blob = new Blob([csv.join('\n')], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'tableau_recap.csv';
+  a.click();
+  URL.revokeObjectURL(url);
+  toast('Tableau exporté en CSV');
+});
+
+document.getElementById('btnExportChart').addEventListener('click', () => {
+  Plotly.downloadImage('chartPrincipal', { format: 'png', filename: 'graphique_principal', width: 1200, height: 600 });
+  toast('Graphique exporté en PNG');
+});
+
+// Tri du tableau
+document.querySelectorAll('#tableauRecap th').forEach(th => {
+  th.addEventListener('click', () => {
+    const col = th.dataset.sort;
+    if (ETAT.triTableau.col === col) ETAT.triTableau.dir = ETAT.triTableau.dir === 'asc' ? 'desc' : 'asc';
+    else { ETAT.triTableau.col = col; ETAT.triTableau.dir = 'asc'; }
+    if (ETAT.recordsFiltres.length > 0) renderTableauRecap(calculerIndicateurs(ETAT.recordsFiltres));
+  });
+});
+
+// ============================================================================
+// CHARGEMENT INITIAL
+// ============================================================================
+async function loadDashboard() {
+  const loadingMsg = document.getElementById('loadingMsg');
+  const errorMsg = document.getElementById('errorMsg');
+  const dashboard = document.getElementById('dashboard');
+
+  try {
+    loadingMsg.style.display = 'block';
+    errorMsg.style.display = 'none';
+    dashboard.style.display = 'none';
+
+    ETAT.records = await fetchData(1000);
+    ETAT.recordsFiltres = filtrerParPeriode(ETAT.records, ETAT.periode);
+
+    loadingMsg.style.display = 'none';
+    dashboard.style.display = 'block';
+
+    renderAll();
+  } catch (err) {
+    console.error('Erreur complète :', err);
+    loadingMsg.style.display = 'none';
+    errorMsg.style.display = 'block';
+    errorMsg.innerHTML = '<strong>⚠️ Erreur :</strong> ' + err.message;
+  }
+}
+
+loadDashboard();
+setInterval(async () => {
+  try {
+    ETAT.records = await fetchData(1000);
+    ETAT.recordsFiltres = filtrerParPeriode(ETAT.records, ETAT.periode);
+    renderAll();
+  } catch (err) { console.warn('Auto-refresh échoué :', err.message); }
+}, REFRESH_MS);
+</script>
+</body>
+</html>
